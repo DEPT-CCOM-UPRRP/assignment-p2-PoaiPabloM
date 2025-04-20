@@ -11,3 +11,7 @@
     marker-end: url(#arrow-head-highlighted);
     marker-end: url(#arrow-head-highlighted-selected);
 }
+#charts-container {
+    display: flex;
+    align-items: flex-start; 
+}

@@ -8,7 +8,7 @@ class BarChart {
   constructor(_config, data) {
     this.config = {
       parentElement: _config.parentElement,
-      containerWidth: 240,
+      containerWidth: 300,
       containerHeight: 260,
       margin: {
         top: 30,
@@ -30,6 +30,8 @@ class BarChart {
     // Todo: Create SVG area, initialize scales and axes
     // svg area
     vis.svg = d3.select(vis.config.parentElement)
+      .append('svg')
+      .attr('class', 'bar-chart')
       .attr('width', vis.config.containerWidth)
       .attr('height', vis.config.containerHeight);
 
@@ -42,20 +44,23 @@ class BarChart {
 
     // Scales
     vis.xScale = d3.scaleBand()
-      .domain(vis.data.map(d => d.gender))
+      .domain(vis.genderCounts.map(d => d.gender))
       .range([0, vis.width])
       .padding(0.5);
 
     vis.yScale = d3.scaleLinear()
-      .domain([0, 500])
-      .range([0, vis.height]);
+      .domain([0, d3.max(vis.genderCounts, d => d.count)])
+      .range([vis.height, 0]);
 
     // Axes
     vis.xAxis = d3.axisBottom(vis.xScale);
     vis.yAxis = d3.axisLeft(vis.yScale);
 
-    vis.xAxisGroup = vis.chartArea.append('g');
-    vis.yAxisGroup = vis.chartArea.append('g');
+    vis.xAxisGroup = vis.chartArea.append('g')
+      .attr('transform', `translate(0,${vis.height})`);
+    vis.yAxisGroup = vis.chartArea.append('g')
+      .attr('transform', `translate(${vis.config.margin.left},0)`);
+    
 
     vis.updateVis();
   }
@@ -64,6 +69,11 @@ class BarChart {
     let vis = this;
     // Todo: Prepare data and scales
     // group data by gender and count occurrences
+    // recalculate gender counts
+    vis.genderCounts = Array.from(
+      d3.rollup(vis.data, v => v.length, d => d.gender),
+      ([gender, count]) => ({ gender, count })
+    );
 
     // update scales
     vis.xScale.domain(vis.genderCounts.map(d => d.gender));
@@ -78,23 +88,27 @@ class BarChart {
     // Todo: Bind data to visual elements, update axes
     // Bind data to bars
     const bars = vis.chartArea.selectAll('.bar')
-        .data(vis.genderCounts, d => d.gender);
-
-    bars.enter()
-        .append('rect')
-        .attr('class', 'bar')
-        .merge(bars)
-        .attr('x', d => vis.xScale(d.gender))
-        .attr('y', d => vis.yScale(d.count))
-        .attr('width', vis.xScale.bandwidth())
-        .attr('height', d => vis.height - vis.yScale(d.count))
-        .attr('fill', 'steelblue')
-        .on('click', (event, d) => {
-          // Emit filter event
-          vis.dispatcher.call('filterByGender', null, d.gender);
-        });
-
-    bars.exit().remove();
+        .data(vis.genderCounts, d => d.gender)
+        .join(
+          enter => enter
+            .append('rect')
+            .attr('x', d => vis.xScale(d.gender))
+            .attr('y', d => vis.yScale(d.count))
+            .attr('width', vis.xScale.bandwidth())
+            .attr('height', d => vis.height - vis.yScale(d.count))
+            .attr('fill', 'blue')
+            .on('click',(event, d) => {
+              // Emit filter event
+              vis.dispatcher.call('filterByGender', null, d.gender);
+            }),
+          update => update
+            .attr('x', d => vis.xScale(d.gender))
+            .attr('y', d => vis.yScale(d.count))
+            .attr('width', vis.xScale.bandwidth())
+            .attr('height', d => vis.height - vis.yScale(d.count)),
+          exit => exit.remove()
+        );
+  
 
     // Update axes
     vis.xAxisGroup.call(vis.xAxis);

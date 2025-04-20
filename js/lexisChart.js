@@ -18,7 +18,8 @@ class LexisChart {
       }
       // Todo: Add or remove attributes from config as needed
     }
-    this.initVis();
+    this.data = data; // Store the data
+    this.initVis();   // Initialize the visualization
   }
 
   initVis() {
@@ -30,6 +31,7 @@ class LexisChart {
 
     // Define size of SVG drawing area
     vis.svg = d3.select(vis.config.parentElement)
+      .append('svg')
       .attr('width', vis.config.containerWidth)
       .attr('height', vis.config.containerHeight);
 
@@ -54,19 +56,107 @@ class LexisChart {
     // Helper function to create the arrows and styles for our various arrow heads
     vis.createMarkerEnds();
 
-    // Todo: initialize scales, axes, static elements, etc.
+    // Initialize scales
+    vis.xScale = d3.scaleLinear()
+      .domain([1950, 2021]) // Static domain for x-axis (year)
+      .range([0, vis.config.width]);
+
+    vis.yScale = d3.scaleLinear()
+      .domain([25, 95]) // Static domain for y-axis (age)
+      .range([vis.config.height, 0]); // Inverted range for correct orientation
+
+    // Initialize axes
+    vis.xAxis = d3.axisBottom(vis.xScale).ticks(10);
+    vis.yAxis = d3.axisLeft(vis.yScale).ticks(10);
+
+    // Append x-axis group
+    vis.xAxisGroup = vis.chartArea.append('g')
+      .attr('transform', `translate(0,${vis.config.height})`);
+
+    // Append y-axis group
+    vis.yAxisGroup = vis.chartArea.append('g');
+
+    // Add axis labels
+    vis.svg.append('text')
+      .attr('x', vis.config.margin.left)
+      .attr('y', vis.config.margin.top - 5)
+      .attr('class', 'axis-label')
+      .text('Age'); // Label for y-axis
+
+    vis.svg.append('text')
+      .attr('x', vis.config.width - 50)
+      .attr('y', vis.config.containerHeight - 5)
+      .attr('class', 'axis-label')
+      .text('Year'); // Label for x-axis
+
+    // Initialize tooltip
+    vis.tooltip = d3.select('body').append('div')
+      .attr('class', 'tooltip')
+      .style('opacity', 0);
+
+    vis.updateVis();
   }
 
-
-  updateVis() {
+  updateVis(filteredData = this.data) {
     let vis = this;
-    // Todo: prepare data
-  }
 
+    // Filter data if needed (e.g., based on user interaction)
+    vis.filteredData = filteredData;
+
+    vis.renderVis();
+  }
 
   renderVis() {
     let vis = this;
-    // Todo: Bind data to visual elements (enter-update-exit or join)
+
+    // Bind data to arrows
+    const arrows = vis.chart.selectAll('.arrow')
+      .data(vis.filteredData, d => d.id);
+
+    // Enter selection: Append new arrows
+    arrows.enter()
+      .append('line')
+      .attr('class', 'arrow')
+      .merge(arrows) // Merge with update selection
+      .attr('x1', d => vis.xScale(d.start_year))
+      .attr('x2', d => vis.xScale(d.end_year))
+      .attr('y1', d => vis.yScale(d.start_age))
+      .attr('y2', d => vis.yScale(d.end_age))
+      .attr('stroke', d => d.label === 1 ? 'steelblue' : 'grey') // Highlighted if label=1
+      .attr('stroke-width', d => d.label === 1 ? 3 : 1.5) // Thicker stroke for highlighted
+      .attr('marker-end', 'url(#arrow-head)') // Add arrowhead
+      .on('mouseover', (event, d) => {
+        // Show tooltip on hover
+        vis.tooltip
+          .style('opacity', 1)
+          .html(`
+            <strong>${d.leader}</strong><br>
+            Country: ${d.country}<br>
+            Start Year: ${d.start_year}<br>
+            End Year: ${d.end_year}<br>
+            Start Age: ${d.start_age}<br>
+            End Age: ${d.end_age}<br>
+            Duration: ${d.duration} years<br>
+            GDP per Capita: ${d.pcgdp ? d.pcgdp.toFixed(2) : 'N/A'}
+          `)
+          .style('left', (event.pageX + 10) + 'px')
+          .style('top', (event.pageY - 10) + 'px');
+      })
+      .on('mouseout', () => {
+        // Hide tooltip on mouseout
+        vis.tooltip.style('opacity', 0);
+      })
+      .on('click', function(event, d) {
+        // Toggle selected style on click
+        d3.select(this).classed('selected', !d3.select(this).classed('selected'));
+      });
+
+    // Exit selection: Remove old arrows
+    arrows.exit().remove();
+
+    // Update axes
+    vis.xAxisGroup.call(vis.xAxis);
+    vis.yAxisGroup.call(vis.yAxis);
   }
 
   /**

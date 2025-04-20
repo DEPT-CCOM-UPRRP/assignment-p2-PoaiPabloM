@@ -17,13 +17,21 @@ d3.csv('data/leaderlist.csv').then(data => {
   data.sort((a,b) => a.label - b.label);
 
   // Initialize views
-  const scatterPlot = new ScatterPlot({ parentElement: '#scatter-plot' }, data);
-  const lexisChart = new LexisChart({ parentElement: '#lexis-chart' }, data);
-  const barChart = new BarChart({ parentElement: '#bar-chart' }, data);
+  const scatterPlot = new ScatterPlot({ parentElement: '#scatterPlot' }, data);
+  const lexisChart = new LexisChart({ parentElement: '#lexisChart' }, data);
+  const barChart = new BarChart({ parentElement: '#barChart' }, data);
 
   // Filter data
   function filterData(criteria) {
-    const filteredData = data.filter(d => d.gender === criteria || d.country === criteria);
+    let filteredData;
+
+    if (criteria === 'Male' || criteria === 'Female') {
+      // Filter by gender
+      filteredData = data.filter(d => d.gender === criteria);
+    } else {
+      // Filter by country
+      filteredData = data.filter(d => d.country === criteria);
+    }
     scatterPlot.updateVis(filteredData);
     lexisChart.updateVis(filteredData);
     barChart.updateVis(filteredData);
