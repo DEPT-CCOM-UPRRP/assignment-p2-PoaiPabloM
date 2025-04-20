@@ -28,6 +28,9 @@ d3.csv('data/leaderlist.csv').then(data => {
     if (criteria === 'Male' || criteria === 'Female') {
       // Filter by gender
       filteredData = data.filter(d => d.gender === criteria);
+    } else if (['oecd', 'eu27', 'brics', 'gseven', 'gtwenty'].includes(criteria)) {
+      // Filter by group (e.g., OECD, EU27, etc.)
+      filteredData = data.filter(d => d[criteria] === 1);
     } else {
       // Filter by country
       filteredData = data.filter(d => d.country === criteria);
