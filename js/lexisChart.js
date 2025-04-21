@@ -100,7 +100,7 @@ class LexisChart {
   updateVis(filteredData = this.data) {
     let vis = this;
 
-    // Filter data if needed (e.g., based on user interaction)
+    // Filter data if needed
     vis.filteredData = filteredData;
 
     vis.renderVis();

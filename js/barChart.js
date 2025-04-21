@@ -19,7 +19,13 @@ class BarChart {
       // Todo: Add or remove attributes from config as needed
 
     }
-    this.genderCounts = Array.from(d3.rollup(data, v => v.length, d => d.gender), ([gender, count]) => ({ gender, count }));
+    // Calculate and store the original gender counts
+    this.originalGenderCounts = Array.from(
+      d3.rollup(data, v => v.length, d => d.gender),
+      ([gender, count]) => ({ gender, count })
+    );
+
+    this.genderCounts = [...this.originalGenderCounts]; // Copy for initial rendering
     this.data = data;
     this.dispatcher = d3.dispatch('filterByGender');
     this.initVis();
@@ -44,12 +50,12 @@ class BarChart {
 
     // Scales
     vis.xScale = d3.scaleBand()
-      .domain(vis.genderCounts.map(d => d.gender))
+      .domain(vis.originalGenderCounts.map(d => d.gender))
       .range([0, vis.width])
       .padding(0.5);
 
     vis.yScale = d3.scaleLinear()
-      .domain([0, d3.max(vis.genderCounts, d => d.count)])
+      .domain([0, d3.max(vis.originalGenderCounts, d => d.count)])
       .range([vis.height, 0]);
 
     // Axes
@@ -65,50 +71,63 @@ class BarChart {
     vis.updateVis();
   }
 
-  updateVis() {
+  updateVis(filteredData = this.data) {
     let vis = this;
     // Todo: Prepare data and scales
     // group data by gender and count occurrences
     // recalculate gender counts
+    // Group data by gender and count occurrences
     vis.genderCounts = Array.from(
-      d3.rollup(vis.data, v => v.length, d => d.gender),
+      d3.rollup(filteredData, v => v.length, d => d.gender),
       ([gender, count]) => ({ gender, count })
     );
 
-    // update scales
-    vis.xScale.domain(vis.genderCounts.map(d => d.gender));
-    vis.yScale.domain([0, d3.max(vis.genderCounts, d => d.count)]);
+    // Update scales
+    vis.yScale.domain([0, d3.max(vis.genderCounts, d => d.count) || 1]);
 
-    //call renderVis
-    vis.renderVis();
+    // Call renderVis
+    vis.renderVis(filteredData);
   }
 
-  renderVis() {
+  renderVis(filteredData) {
     let vis = this;
+    vis.activeFilter = null;
+
     // Todo: Bind data to visual elements, update axes
     // Bind data to bars
+    // Bind data to bars
     const bars = vis.chartArea.selectAll('.bar')
-        .data(vis.genderCounts, d => d.gender)
-        .join(
-          enter => enter
-            .append('rect')
-            .attr('x', d => vis.xScale(d.gender))
-            .attr('y', d => vis.yScale(d.count))
-            .attr('width', vis.xScale.bandwidth())
-            .attr('height', d => vis.height - vis.yScale(d.count))
-            .attr('fill', 'blue')
-            .on('click',(event, d) => {
-              // Emit filter event
-              vis.dispatcher.call('filterByGender', null, d.gender);
-            }),
-          update => update
-            .attr('x', d => vis.xScale(d.gender))
-            .attr('y', d => vis.yScale(d.count))
-            .attr('width', vis.xScale.bandwidth())
-            .attr('height', d => vis.height - vis.yScale(d.count)),
-          exit => exit.remove()
-        );
-  
+      .data(vis.genderCounts, d => d.gender);
+
+    // Exit selection: Remove old bars
+    bars.exit().remove();
+
+    // Enter selection: Append new bars
+    bars.enter()
+      .append('rect')
+      .attr('class', 'bar')
+      .merge(bars)
+      .attr('x', d => vis.xScale(d.gender))
+      .attr('y', d => vis.yScale(d.count))
+      .attr('width', vis.xScale.bandwidth())
+      .attr('height', d => vis.height - vis.yScale(d.count))
+      .attr('fill', d => vis.activeFilter === d.gender ? 'orange' : 'blue')
+      .on('click', (event, d) => {
+        // Toggle filter
+        if (vis.activeFilter === d.gender) {
+          vis.activeFilter = null; // Reset filter
+          vis.dispatcher.call('filterByGender', null, null);
+        } else {
+          vis.activeFilter = d.gender; // Set new filter
+          vis.dispatcher.call('filterByGender', null, d.gender);
+        }
+
+        // Update bar colors to reflect active filter
+        vis.chartArea.selectAll('.bar')
+          .attr('fill', barData => 
+            vis.activeFilter === barData.gender ? 'orange' : 'blue'
+          );
+      });
 
     // Update axes
     vis.xAxisGroup.call(vis.xAxis);

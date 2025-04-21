@@ -21,6 +21,9 @@ d3.csv('data/leaderlist.csv').then(data => {
   const lexisChart = new LexisChart({ parentElement: '#lexisChart' }, data);
   const barChart = new BarChart({ parentElement: '#barChart' }, data);
 
+  // make sure default is first option
+  filterData('oecd');
+
   // Filter data
   function filterData(criteria) {
     let filteredData;
@@ -42,7 +45,18 @@ d3.csv('data/leaderlist.csv').then(data => {
 
   // Listen to events and update views
   barChart.dispatcher.on('filterByGender', gender => {
-    filterData(gender);
+    let filteredData;
+
+    if (gender) {
+      // Filter data by gender
+      filteredData = scatterPlot.filteredData.filter(d => d.gender === gender);
+    } else {
+      // Reset filter
+      filteredData = scatterPlot.filteredData;
+    }
+  
+    // Update LexisChart with filtered data
+    lexisChart.updateVis(filteredData);
   });
 
   // Listen to select box changes
