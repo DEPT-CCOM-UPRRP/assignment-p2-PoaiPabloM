@@ -63,7 +63,7 @@ class LexisChart {
 
     vis.yScale = d3.scaleLinear()
       .domain([25, 95]) // Static domain for y-axis (age)
-      .range([vis.config.height, 0]); // Inverted range for correct orientation
+      .range([vis.config.height, 0]);
 
     // Initialize axes
     vis.xAxis = d3.axisBottom(vis.xScale).ticks(10);
