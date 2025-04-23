@@ -40,6 +40,7 @@ d3.csv('data/leaderlist.csv').then(data => {
       // Filter by country
       filteredData = data.filter(d => d.country === criteria);
     }
+
     scatterPlot.updateVis(filteredData);
     lexisChart.updateVis(filteredData);
     barChart.updateVis(filteredData);
@@ -51,10 +52,19 @@ d3.csv('data/leaderlist.csv').then(data => {
 
     if (gender) {
       // Filter data by gender
-      filteredData = scatterPlot.filteredData.filter(d => d.gender === gender);
+      filteredData = lexisChart.filteredData.filter(d => d.gender === gender);
     } else {
       // Reset filter
-      filteredData = scatterPlot.filteredData;
+      filteredData = data.filter(d => {
+        // Apply the current country or group filter
+        const currentFilter = d3.select('#country-selector').property('value');
+        if (['oecd', 'eu27', 'brics', 'gseven', 'gtwenty'].includes(currentFilter)) {
+          return d[currentFilter] === 1;
+        } else if (currentFilter) {
+          return d.country === currentFilter;
+        }
+        return true; // No country or group filter applied
+      });
     }
   
     // Update LexisChart with filtered data
