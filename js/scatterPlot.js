@@ -110,7 +110,7 @@ class ScatterPlot {
       .attr('cx', d => vis.xScale(d.pcgdp)) // Position based on GDP
       .attr('cy', d => vis.yScale(d.start_age)) // Position based on start age
       .attr('r', 5) // Set radius
-      .attr('fill', d => vis.sharedSelection.has(d.id) ? 'orange' : 'steelblue') // Highlight selected points
+      .attr('fill', d => vis.sharedSelection.has(d.id) ? 'red' : 'steelblue') // Highlight selected points
       .attr('fill-opacity', d => vis.activeFilter && d.gender !== vis.activeFilter ? 0.15 : 0.7) // Set fill opacity
       .on('mouseover', (event, d) => {
         if (!d3.select(event.target).classed('inactive')) { // Only show tooltip for active points

@@ -124,8 +124,8 @@ class LexisChart {
       .attr('x2', d => vis.xScale(d.end_year))
       .attr('y1', d => vis.yScale(d.start_age))
       .attr('y2', d => vis.yScale(d.end_age))
-      .attr('stroke', d => vis.sharedSelection.has(d.id) ? 'orange' : 'grey') // Highlight selected arrows
-      .attr('stroke-width', d => d.label === 1 ? 3 : 1.5) // Thicker stroke for highlighted
+      .attr('stroke', d => vis.sharedSelection.has(d.id) ? 'red' : 'grey') // Highlight selected arrows
+      .attr('stroke-width', d => vis.sharedSelection.has(d.id) ? 5 : (d.label === 1 ? 3 : 1.5))
       .attr('marker-end', 'url(#arrow-head)') // Add arrowhead
       .on('mouseover', (event, d) => {
         // Show tooltip on hover
@@ -155,10 +155,39 @@ class LexisChart {
           vis.sharedSelection.add(d.id); // Select arrow
         }
         vis.dispatcher.call('selectionChanged', null, Array.from(vis.sharedSelection));
-      });
+    });
 
+    // Add labels for selected arrows
+    const labels = vis.chart.selectAll('.arrow-label')
+      .data(vis.filteredData.filter(d => vis.sharedSelection.has(d.id)), d => d.id);
+
+    // Enter selection: Append new labels
+    labels.enter()
+      .append('text')
+      .attr('class', 'arrow-label')
+      .merge(labels)
+      .attr('x', d => (vis.xScale(d.start_year) + vis.xScale(d.end_year)) / 2) // Position label at the midpoint of the arrow
+      .attr('y', d => vis.yScale(d.start_age) - 5) // Position label slightly above the arrow
+      .attr('text-anchor', 'middle')
+      .text(d => d.leader)
+      .style('font-size', '12px')
+      .style('fill', 'black')
+      .attr('transform', d => {
+        // Calculate the angle of the arrow
+        const x1 = vis.xScale(d.start_year);
+        const x2 = vis.xScale(d.end_year);
+        const y1 = vis.yScale(d.start_age);
+        const y2 = vis.yScale(d.end_age);
+        const angle = Math.atan2(y2 - y1, x2 - x1) * (180 / Math.PI); // Convert radians to degrees
+    
+        // Apply rotation transformation
+        const midX = (x1 + x2) / 2; // Midpoint X
+        const midY = (y1 + y2) / 2; // Midpoint Y
+        return `rotate(${angle}, ${midX}, ${midY})`; // Rotate around the midpoint
+      });
     // Exit selection: Remove old arrows
     arrows.exit().remove();
+    labels.exit().remove();
 
     // Update axes
     vis.xAxisGroup.call(vis.xAxis);
