@@ -5,7 +5,7 @@ class LexisChart {
    * @param {Object}
    */
   // Todo: Add or remove parameters from the constructor as needed
-  constructor(_config, data) {
+  constructor(_config, data, Selection) {
     this.config = {
       parentElement: _config.parentElement,
       containerWidth: 1000,
@@ -19,7 +19,9 @@ class LexisChart {
       // Todo: Add or remove attributes from config as needed
     }
     this.data = data; // Store the data
-    this.initVis();   // Initialize the visualization
+    this.dispatcher = d3.dispatch('selectionChanged'); // Event dispatcher
+    this.sharedSelection = Selection;
+    this.initVis();   // Initialize the visualization 
   }
 
   initVis() {
@@ -122,7 +124,7 @@ class LexisChart {
       .attr('x2', d => vis.xScale(d.end_year))
       .attr('y1', d => vis.yScale(d.start_age))
       .attr('y2', d => vis.yScale(d.end_age))
-      .attr('stroke', d => d.label === 1 ? 'steelblue' : 'grey') // Highlighted if label=1
+      .attr('stroke', d => vis.sharedSelection.has(d.id) ? 'orange' : 'grey') // Highlight selected arrows
       .attr('stroke-width', d => d.label === 1 ? 3 : 1.5) // Thicker stroke for highlighted
       .attr('marker-end', 'url(#arrow-head)') // Add arrowhead
       .on('mouseover', (event, d) => {
@@ -147,8 +149,12 @@ class LexisChart {
         vis.tooltip.style('opacity', 0);
       })
       .on('click', function(event, d) {
-        // Toggle selected style on click
-        d3.select(this).classed('selected', !d3.select(this).classed('selected'));
+        if (vis.sharedSelection.has(d.id)) {
+          vis.sharedSelection.delete(d.id); // Deselect arrow
+        } else {
+          vis.sharedSelection.add(d.id); // Select arrow
+        }
+        vis.dispatcher.call('selectionChanged', null, Array.from(vis.sharedSelection));
       });
 
     // Exit selection: Remove old arrows
@@ -228,5 +234,11 @@ class LexisChart {
       .attr('d', 'M0,0 L2,2 L 0,4')
       .attr('stroke', '#e89f03')
       .attr('fill', 'none');
+  }
+
+  updateSelection(Selection) {
+    let vis = this;
+    vis.sharedSelection = Selection;
+    vis.renderVis(); // Re-render to update selection
   }
 }

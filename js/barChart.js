@@ -85,6 +85,12 @@ class BarChart {
     // Update scales
     vis.yScale.domain([0, d3.max(vis.genderCounts, d => d.count) || 1]);
 
+    if (vis.activeFilter) {
+      d3.selectAll('.point.highlighted')
+        .filter(d => d.gender !== vis.activeFilter)
+        .classed('highlighted', false);
+    }
+
     // Call renderVis
     vis.renderVis(filteredData);
   }
@@ -121,11 +127,20 @@ class BarChart {
           vis.activeFilter = d.gender; // Set new filter
           vis.dispatcher.call('filterByGender', null, d.gender);
         }
-
+      
         // Update bar colors to reflect active filter
         vis.chartArea.selectAll('.bar')
           .attr('fill', barData => 
             vis.activeFilter === barData.gender ? 'orange' : 'blue'
+          );
+      
+        // Maintain selection for points that match the active filter
+        d3.selectAll('.point')
+          .attr('fill-opacity', pointData => 
+            vis.activeFilter && pointData.gender !== vis.activeFilter ? 0.15 : 0.7
+          )
+          .classed('inactive', pointData => 
+            vis.activeFilter && pointData.gender !== vis.activeFilter
           );
       });
 

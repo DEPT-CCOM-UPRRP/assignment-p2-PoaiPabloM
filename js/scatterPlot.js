@@ -5,7 +5,7 @@ class ScatterPlot {
    * @param {Object}
    */
   // Todo: Add or remove parameters from the constructor as needed
-  constructor(_config, data) {
+  constructor(_config, data, Selection) {
     this.config = {
       parentElement: _config.parentElement,
       containerWidth: 720,
@@ -19,6 +19,8 @@ class ScatterPlot {
       // Todo: Add or remove attributes from config as needed
     };
     this.data = data; // Store the data
+    this.dispatcher = d3.dispatch('selectionChanged'); // event dispatcher
+    this.sharedSelection = Selection;
     this.initVis();   // Initialize the visualization
   }
 
@@ -108,30 +110,49 @@ class ScatterPlot {
       .attr('cx', d => vis.xScale(d.pcgdp)) // Position based on GDP
       .attr('cy', d => vis.yScale(d.start_age)) // Position based on start age
       .attr('r', 5) // Set radius
-      .attr('fill', 'steelblue') // Set fill color
-      .attr('fill-opacity', 0.7) // Set fill opacity
+      .attr('fill', d => vis.sharedSelection.has(d.id) ? 'orange' : 'steelblue') // Highlight selected points
+      .attr('fill-opacity', d => vis.activeFilter && d.gender !== vis.activeFilter ? 0.15 : 0.7) // Set fill opacity
       .on('mouseover', (event, d) => {
-        // Show tooltip on hover
-        vis.tooltip
-          .style('opacity', 1)
-          .html(`Leader: ${d.leader}<br>Country: ${d.country}<br>GDP: ${d.pcgdp}`)
-          .style('left', (event.pageX + 10) + 'px')
-          .style('top', (event.pageY - 10) + 'px');
+        if (!d3.select(event.target).classed('inactive')) { // Only show tooltip for active points
+          vis.tooltip
+            .style('opacity', 1)
+            .html(`Leader: ${d.leader}<br>Country: ${d.country}<br>GDP: ${d.pcgdp}`)
+            .style('left', (event.pageX + 10) + 'px')
+            .style('top', (event.pageY - 10) + 'px');
+        }
       })
       .on('mouseout', () => {
-        // Hide tooltip on mouseout
         vis.tooltip.style('opacity', 0);
       })
       .on('click', function(event, d) {
-        // Toggle highlight on click
-        d3.select(this).classed('highlighted', !d3.select(this).classed('highlighted'));
+        if (vis.sharedSelection.has(d.id)) {
+          vis.sharedSelection.delete(d.id); // Deselect point
+        } else {
+          vis.sharedSelection.add(d.id); // Select point
+        }
+        vis.dispatcher.call('selectionChanged', null, Array.from(vis.sharedSelection));
       });
 
     // Exit selection: Remove old circles
     circles.exit().remove();
 
+    // clear selection when clicking on visualization
+    vis.svg.on('click', function(event) {
+      if (event.target.tagName.toLowerCase() !== 'circle') {
+        vis.sharedSelection.clear();
+        vis.dispatcher.call('selectionChanged', null, Array.from(vis.sharedSelection));
+      }
+    });
+
     // Update axes
     vis.xAxisGroup.call(vis.xAxis);
     vis.yAxisGroup.call(vis.yAxis);
   }
+
+  updateSelection(Selection) {
+    let vis = this;
+    vis.sharedSelection = Selection;
+    vis.renderVis(); // Re-render to update selection
+  }
 }
+

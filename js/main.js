@@ -17,8 +17,10 @@ d3.csv('data/leaderlist.csv').then(data => {
   data.sort((a,b) => a.label - b.label);
 
   // Initialize views
-  const scatterPlot = new ScatterPlot({ parentElement: '#scatterPlot' }, data);
-  const lexisChart = new LexisChart({ parentElement: '#lexisChart' }, data);
+  const sharedSelection = new Set();
+
+  const scatterPlot = new ScatterPlot({ parentElement: '#scatterPlot' }, data, sharedSelection);
+  const lexisChart = new LexisChart({ parentElement: '#lexisChart' }, data, sharedSelection);
   const barChart = new BarChart({ parentElement: '#barChart' }, data);
 
   // make sure default is first option
@@ -57,6 +59,18 @@ d3.csv('data/leaderlist.csv').then(data => {
   
     // Update LexisChart with filtered data
     lexisChart.updateVis(filteredData);
+  });
+
+  scatterPlot.dispatcher.on('selectionChanged', selectedIds => {
+    sharedSelection.clear();
+    selectedIds.forEach(id => sharedSelection.add(id));
+    lexisChart.updateSelection(sharedSelection);
+  });
+  
+  lexisChart.dispatcher.on('selectionChanged', selectedIds => {
+    sharedSelection.clear();
+    selectedIds.forEach(id => sharedSelection.add(id));
+    scatterPlot.updateSelection(sharedSelection);
   });
 
   // Listen to select box changes
